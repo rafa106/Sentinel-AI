@@ -1,0 +1,62 @@
+{
+  "entities": {
+    "Device": {
+      "title": "Device",
+      "description": "An endpoint device monitored by Sentinel AI",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Laptop", "Desktop", "Smartphone"] },
+        "status": { "type": "string", "enum": ["Protected", "Scanning", "Vulnerable"] },
+        "risk": { "type": "string", "enum": ["Low", "Medium", "High"] },
+        "user": { "type": "string" },
+        "lastSeen": { "type": "string" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["name", "type", "user", "ownerId"]
+    },
+    "VaultItem": {
+      "title": "VaultItem",
+      "description": "An encrypted item stored in the data vault",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["title", "category", "content", "ownerId"]
+    },
+    "TeamMember": {
+      "title": "TeamMember",
+      "description": "A member of the security team",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string" },
+        "email": { "type": "string" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["name", "role", "email", "ownerId"]
+    }
+  },
+  "firestore": {
+    "/devices/{deviceId}": {
+      "schema": "Device",
+      "description": "Collection of endpoint devices"
+    },
+    "/vault/{itemId}": {
+      "schema": "VaultItem",
+      "description": "Collection of secure vault items"
+    },
+    "/team/{memberId}": {
+      "schema": "TeamMember",
+      "description": "Collection of team members"
+    }
+  }
+}

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Shield, AlertTriangle, CheckCircle, Activity, Globe, Cpu, Zap } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, Activity, Globe, Cpu, Zap, Lock, Users } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cn } from '../lib/utils';
+import { db, collection, query, where, onSnapshot } from '../lib/firebase';
+import { useAuth } from './AuthProvider';
 
 const data = [
   { time: '00:00', threats: 12, traffic: 400 },
@@ -36,7 +38,48 @@ const StatCard = ({ icon: Icon, label, value, color, trend }: any) => (
 );
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [isFirewallActive, setIsFirewallActive] = useState(true);
+  const [counts, setCounts] = useState({ devices: 0, team: 0, items: 0 });
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubDevices = onSnapshot(query(collection(db, 'devices'), where('ownerId', '==', user.uid)), (snap) => {
+      setCounts(prev => ({ ...prev, devices: snap.size }));
+    });
+
+    const unsubTeam = onSnapshot(query(collection(db, 'team'), where('ownerId', '==', user.uid)), (snap) => {
+      setCounts(prev => ({ ...prev, team: snap.size }));
+    });
+
+    const unsubVault = onSnapshot(query(collection(db, 'vault'), where('ownerId', '==', user.uid)), (snap) => {
+      setCounts(prev => ({ ...prev, items: snap.size }));
+    });
+
+    return () => {
+      unsubDevices();
+      unsubTeam();
+      unsubVault();
+    };
+  }, [user]);
+
+  const handleStartScan = () => {
+    setIsScanning(true);
+    setScanProgress(0);
+    const interval = setInterval(() => {
+      setScanProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setIsScanning(false);
+          return 100;
+        }
+        return prev + 5;
+      });
+    }, 200);
+  };
 
   return (
     <div className="space-y-8">
@@ -68,9 +111,20 @@ export default function Dashboard() {
               )} />
             </button>
           </div>
-          <button className="flex-1 sm:flex-none px-4 py-2 bg-security-accent/10 text-security-accent border border-security-accent/20 rounded-lg font-medium hover:bg-security-accent/20 transition-all flex items-center justify-center gap-2">
-            <Activity className="w-4 h-4" />
-            Full System Scan
+          <button 
+            onClick={handleStartScan}
+            disabled={isScanning}
+            className="flex-1 sm:flex-none px-4 py-2 bg-security-accent/10 text-security-accent border border-security-accent/20 rounded-lg font-medium hover:bg-security-accent/20 transition-all flex items-center justify-center gap-2 relative overflow-hidden"
+          >
+            {isScanning && (
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${scanProgress}%` }}
+                className="absolute inset-y-0 left-0 bg-security-accent/20"
+              />
+            )}
+            <Activity className={cn("w-4 h-4", isScanning && "animate-spin")} />
+            <span className="relative z-10">{isScanning ? `Scanning... ${scanProgress}%` : "Full System Scan"}</span>
           </button>
         </div>
       </div>
@@ -78,30 +132,30 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
           icon={Shield} 
-          label="Security Score" 
-          value="98/100" 
-          color="security-success" 
-          trend="+2.4%" 
-        />
-        <StatCard 
-          icon={AlertTriangle} 
-          label="Threats Blocked" 
-          value="1,284" 
-          color="security-danger" 
-          trend="+12%" 
-        />
-        <StatCard 
-          icon={Globe} 
-          label="Active Connections" 
-          value="42" 
-          color="security-accent" 
-          trend="-5%" 
+          label="Protection Status" 
+          value={isFirewallActive ? "Active Shield" : "Shield Offline"} 
+          color={isFirewallActive ? "security-success" : "security-danger"} 
+          trend={isFirewallActive ? "Optimum" : "Critical"} 
         />
         <StatCard 
           icon={Cpu} 
-          label="AI Efficiency" 
-          value="99.9%" 
+          label="Secured Endpoints" 
+          value={counts.devices.toString()} 
+          color="security-accent" 
+          trend="+0%" 
+        />
+        <StatCard 
+          icon={Lock} 
+          label="Vault Items" 
+          value={counts.items.toString()} 
           color="security-warning" 
+          trend="Secure" 
+        />
+        <StatCard 
+          icon={Users} 
+          label="Team Members" 
+          value={counts.team.toString()} 
+          color="security-success" 
           trend="Stable" 
         />
       </div>
@@ -130,32 +184,32 @@ export default function Dashboard() {
               <AreaChart data={data}>
                 <defs>
                   <linearGradient id="colorTraffic" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#00f2ff" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#00f2ff" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                   </linearGradient>
                   <linearGradient id="colorThreats" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ff3e3e" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#ff3e3e" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2e" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                 <XAxis 
                   dataKey="time" 
-                  stroke="#4b5563" 
+                  stroke="#475569" 
                   fontSize={10} 
                   tickLine={false} 
                   axisLine={false} 
                 />
                 <YAxis 
-                  stroke="#4b5563" 
+                  stroke="#475569" 
                   fontSize={10} 
                   tickLine={false} 
                   axisLine={false} 
                 />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: '#141417', 
-                    border: '1px solid #2a2a2e',
+                    backgroundColor: '#0f172a', 
+                    border: '1px solid #1e293b',
                     borderRadius: '8px',
                     fontSize: '12px'
                   }}
@@ -164,7 +218,7 @@ export default function Dashboard() {
                 <Area 
                   type="monotone" 
                   dataKey="traffic" 
-                  stroke="#00f2ff" 
+                  stroke="#3b82f6" 
                   fillOpacity={1} 
                   fill="url(#colorTraffic)" 
                   strokeWidth={2}
@@ -172,7 +226,7 @@ export default function Dashboard() {
                 <Area 
                   type="monotone" 
                   dataKey="threats" 
-                  stroke="#ff3e3e" 
+                  stroke="#ef4444" 
                   fillOpacity={1} 
                   fill="url(#colorThreats)" 
                   strokeWidth={2}

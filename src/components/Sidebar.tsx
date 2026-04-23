@@ -1,6 +1,7 @@
 import React from 'react';
-import { Shield, LayoutDashboard, Search, FileCheck, Activity, Settings, Lock, CreditCard, Laptop, Users, X } from 'lucide-react';
+import { Shield, LayoutDashboard, Search, FileCheck, Activity, Settings, Lock, CreditCard, Laptop, Users, X, LogOut } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useAuth } from './AuthProvider';
 
 interface SidebarProps {
   activeTab: string;
@@ -11,6 +12,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeTab, setActiveTab, currentPlan, isOpen, onClose }: SidebarProps) {
+  const { user, logout } = useAuth();
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'scanner', icon: Search, label: 'Threat Scanner' },
@@ -43,8 +45,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentPlan, isOpen, 
               <Shield className="text-security-accent w-6 h-6" />
             </div>
             <div>
-              <h1 className="font-bold text-white tracking-tight">SENTINEL AI</h1>
-              <p className="text-[10px] font-mono text-security-accent uppercase tracking-widest">Cyber Shield</p>
+              <h1 className="font-bold text-white tracking-tight text-sm">SENTINEL AI</h1>
+              <p className="text-[9px] font-mono text-security-accent uppercase tracking-widest">Cyber Shield</p>
             </div>
           </div>
           <button onClick={onClose} className="lg:hidden p-2 text-gray-400 hover:text-white">
@@ -71,44 +73,57 @@ export default function Sidebar({ activeTab, setActiveTab, currentPlan, isOpen, 
                 "w-5 h-5",
                 activeTab === item.id ? "text-security-accent" : "text-gray-500 group-hover:text-gray-300"
               )} />
-              <div className="flex flex-col items-start">
-                <span className="font-medium text-sm">{item.label}</span>
+              <div className="flex flex-col items-start text-left">
+                <span className="font-medium text-sm leading-none">{item.label}</span>
                 {item.corporate && (
-                  <span className="text-[8px] font-mono text-security-warning uppercase tracking-tighter">Enterprise</span>
+                  <span className="text-[8px] font-mono text-security-warning uppercase tracking-tighter mt-1">Enterprise</span>
                 )}
               </div>
               {activeTab === item.id && (
-                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-security-accent shadow-[0_0_8px_rgba(0,242,255,0.8)]" />
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-security-accent shadow-[0_0_12px_rgba(59,130,246,0.8)]" />
               )}
             </button>
           ))}
         </nav>
 
-      <div className="p-4 border-t border-security-border">
-        <button className="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-white/5 rounded-lg transition-all">
-          <Settings className="w-5 h-5" />
-          <span className="font-medium">Settings</span>
-        </button>
-        <div className="mt-4 p-3 bg-security-bg rounded-lg border border-security-border">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono text-gray-500 uppercase">Protection Level</span>
-            <span className={cn(
-              "text-[10px] font-mono font-bold uppercase",
-              currentPlan === 'free' ? "text-gray-400" : "text-security-accent"
-            )}>
-              {currentPlan}
-            </span>
-          </div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-mono text-gray-500 uppercase">System Status</span>
-            <span className="text-[10px] font-mono text-security-success uppercase">Online</span>
-          </div>
-          <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
-            <div className="w-full h-full bg-security-success animate-pulse" />
+        <div className="p-4 border-t border-security-border space-y-4">
+          {user && (
+            <div className="flex items-center gap-3 p-3 bg-security-bg rounded-xl border border-security-border">
+              <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}`} className="w-8 h-8 rounded-full border border-security-accent/20" alt="Avatar" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate">{user.displayName}</p>
+                <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
+              </div>
+              <button 
+                onClick={() => logout()}
+                className="p-1.5 text-gray-500 hover:text-security-danger transition-all hover:bg-security-danger/10 rounded-lg"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          <div className="p-3 bg-security-bg rounded-lg border border-security-border">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-mono text-gray-500 uppercase">Protection</span>
+              <span className={cn(
+                "text-[10px] font-mono font-bold uppercase",
+                currentPlan === 'free' ? "text-gray-400" : "text-security-accent"
+              )}>
+                {currentPlan}
+              </span>
+            </div>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-mono text-gray-500 uppercase">Status</span>
+              <span className="text-[10px] font-mono text-security-success uppercase">Active</span>
+            </div>
+            <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+              <div className="w-full h-full bg-security-success animate-pulse" />
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </>
+    </>
   );
 }

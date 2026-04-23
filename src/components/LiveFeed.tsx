@@ -142,7 +142,7 @@ export default function LiveFeed() {
             <p className="text-xs text-gray-400 leading-relaxed">
               Sentinel AI is currently monitoring 14,203 endpoints and has blocked 42 attacks in the last 60 seconds.
             </p>
-            <button className="w-full py-2 bg-security-accent text-security-bg text-xs font-bold rounded-lg hover:bg-white transition-all">
+            <button className="w-full py-2 bg-security-accent text-white text-xs font-bold rounded-lg hover:bg-blue-400 transition-all shadow-[0_0_15px_rgba(59,130,246,0.3)]">
               Download Full Report
             </button>
           </div>

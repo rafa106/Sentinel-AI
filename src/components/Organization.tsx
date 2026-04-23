@@ -1,14 +1,66 @@
-import React from 'react';
-import { Users, ShieldCheck, FileText, Lock, Globe, Building, ArrowRight, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, ShieldCheck, FileText, Lock, Globe, Building, ArrowRight, CheckCircle2, X, Plus, Trash2, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { db, collection, addDoc, query, where, onSnapshot, deleteDoc, doc } from '../lib/firebase';
+import { useAuth } from './AuthProvider';
 
-const team = [
-  { name: 'Rafael Constancio', role: 'Security Admin', status: 'Active', email: 'rafael@company.com' },
-  { name: 'Ana Silva', role: 'Security Analyst', status: 'Active', email: 'ana@company.com' },
-  { name: 'Carlos Souza', role: 'Compliance Officer', status: 'Active', email: 'carlos@company.com' },
-];
+interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  status: string;
+  email: string;
+  ownerId: string;
+}
 
 export default function Organization() {
+  const { user } = useAuth();
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newMember, setNewMember] = useState({ name: '', role: 'Security Analyst', email: '' });
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(collection(db, 'team'), where('ownerId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const teamData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as TeamMember[];
+      setTeam(teamData);
+      setLoading(false);
+    });
+
+    return unsubscribe;
+  }, [user]);
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMember.name || !newMember.email || !user) return;
+
+    try {
+      await addDoc(collection(db, 'team'), {
+        ...newMember,
+        status: 'Active',
+        ownerId: user.uid
+      });
+      setNewMember({ name: '', role: 'Security Analyst', email: '' });
+      setIsAdding(false);
+    } catch (error) {
+      console.error('Failed to add team member:', error);
+    }
+  };
+
+  const handleRemoveMember = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'team', id));
+    } catch (error) {
+      console.error('Failed to delete team member:', error);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-12">
       <div className="text-center space-y-4">
@@ -30,28 +82,99 @@ export default function Organization() {
                 <Users className="w-5 h-5 text-security-accent" />
                 Security Team
               </h3>
-              <button className="text-xs font-mono text-security-accent uppercase tracking-widest hover:text-white transition-all">
+              <button 
+                onClick={() => setIsAdding(true)}
+                className="text-xs font-mono text-security-accent uppercase tracking-widest hover:text-white transition-all"
+              >
                 Invite Member
               </button>
             </div>
-            <div className="space-y-4">
-              {team.map((member, i) => (
-                <div key={i} className="flex items-center justify-between p-4 bg-security-bg border border-security-border rounded-xl group hover:border-security-accent/30 transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-security-accent/10 rounded-full flex items-center justify-center border border-security-accent/20 text-security-accent font-bold">
-                      {member.name.charAt(0)}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white">{member.name}</h4>
-                      <p className="text-xs text-gray-500 font-mono">{member.email}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-300 font-medium">{member.role}</p>
-                    <span className="text-[10px] font-mono text-security-success uppercase tracking-widest">{member.status}</span>
-                  </div>
+
+            {isAdding && (
+              <div className="p-6 bg-security-bg border border-security-accent/30 rounded-xl space-y-4">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-sm font-bold text-white">Invite New Member</h4>
+                  <button onClick={() => setIsAdding(false)} className="text-gray-500 hover:text-white">
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-              ))}
+                <form onSubmit={handleAddMember} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input 
+                    required
+                    value={newMember.name}
+                    onChange={e => setNewMember({...newMember, name: e.target.value})}
+                    placeholder="Full Name"
+                    className="bg-security-card border border-security-border rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-security-accent"
+                  />
+                  <input 
+                    required
+                    type="email"
+                    value={newMember.email}
+                    onChange={e => setNewMember({...newMember, email: e.target.value})}
+                    placeholder="Email Address"
+                    className="bg-security-card border border-security-border rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-security-accent"
+                  />
+                  <select 
+                    value={newMember.role}
+                    onChange={e => setNewMember({...newMember, role: e.target.value})}
+                    className="bg-security-card border border-security-border rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:border-security-accent"
+                  >
+                    <option value="Security Admin">Security Admin</option>
+                    <option value="Security Analyst">Security Analyst</option>
+                    <option value="Compliance Officer">Compliance Officer</option>
+                  </select>
+                  <button type="submit" className="bg-security-accent text-white font-bold rounded-lg px-4 py-2 text-sm hover:bg-blue-400 transition-all">
+                    Send Invitation
+                  </button>
+                </form>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {loading ? (
+                <div className="py-12 text-center">
+                  <Loader2 className="w-8 h-8 text-security-accent animate-spin mx-auto mb-4" />
+                  <p className="text-xs font-mono text-gray-500 uppercase">Synchronizing Team Directory...</p>
+                </div>
+              ) : team.length === 0 ? (
+                <div className="py-12 text-center border border-dashed border-security-border rounded-xl">
+                  <Users className="w-8 h-8 text-security-accent/20 mx-auto mb-4" />
+                  <p className="text-sm text-white font-bold">No Team Members</p>
+                  <p className="text-xs text-gray-500 mb-4">Invite your security team to collaborate on protection.</p>
+                  <button 
+                    onClick={() => setIsAdding(true)}
+                    className="text-xs font-bold text-security-accent hover:text-white transition-all underline decoration-security-accent/30 underline-offset-4"
+                  >
+                    Invite First Collaborator
+                  </button>
+                </div>
+              ) : (
+                team.map((member) => (
+                  <div key={member.id} className="flex items-center justify-between p-4 bg-security-bg border border-security-border rounded-xl group hover:border-security-accent/30 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-security-accent/10 rounded-full flex items-center justify-center border border-security-accent/20 text-security-accent font-bold">
+                        {member.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white">{member.name}</h4>
+                        <p className="text-xs text-gray-500 font-mono">{member.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      <div className="text-right">
+                        <p className="text-xs text-gray-300 font-medium">{member.role}</p>
+                        <span className="text-[10px] font-mono text-security-success uppercase tracking-widest">{member.status}</span>
+                      </div>
+                      <button 
+                        onClick={() => handleRemoveMember(member.id)}
+                        className="p-2 text-gray-700 hover:text-security-danger transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -107,7 +230,7 @@ export default function Organization() {
                 </div>
               ))}
             </div>
-            <button className="w-full py-3 bg-security-accent text-security-bg font-bold rounded-xl hover:bg-white transition-all flex items-center justify-center gap-2">
+            <button className="w-full py-3 bg-security-accent text-white font-bold rounded-xl hover:bg-blue-400 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(59,130,246,0.3)]">
               Manage Policies
               <ArrowRight className="w-4 h-4" />
             </button>

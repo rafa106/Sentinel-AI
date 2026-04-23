@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Check, Shield, Zap, Crown, CreditCard, Loader2, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { loadStripe } from '@stripe/stripe-js';
+
+import { QRCodeSVG } from 'qrcode.react';
+
+const stripePromise = loadStripe((import.meta as any).env.VITE_STRIPE_PUBLIC_KEY);
 
 interface PricingProps {
   currentPlan: string;
@@ -13,7 +18,8 @@ const plans = [
     id: 'free',
     name: 'Basic Shield',
     price: '0',
-    description: 'Essential protection for casual browsing.',
+    trial: '3 days free',
+    description: 'Full access trial for new security nodes.',
     features: [
       'Basic Threat Scanning',
       'Real-time Dashboard',
@@ -27,7 +33,6 @@ const plans = [
     id: 'pro',
     name: 'Sentinel Pro',
     price: '9.99',
-    trial: '3 days free',
     description: 'Advanced AI-powered security for power users.',
     features: [
       'Unlimited AI Threat Scans',
@@ -45,7 +50,6 @@ const plans = [
     id: 'enterprise',
     name: 'Cyber Titan',
     price: '29.99',
-    trial: '3 days free',
     description: 'Maximum security for businesses and high-risk profiles.',
     features: [
       'Everything in Pro',
@@ -64,20 +68,56 @@ export default function Pricing({ currentPlan, onUpgrade }: PricingProps) {
   const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleCheckout = (planId: string) => {
+  const handleCheckout = async (planId: string) => {
     if (planId === currentPlan) return;
+    
+    // Free plan just starts the trial immediately in this simulation
+    if (planId === 'free') {
+      setIsCheckingOut(planId);
+      setTimeout(() => {
+        setIsCheckingOut(null);
+        setShowSuccess(true);
+        onUpgrade(planId);
+        setTimeout(() => setShowSuccess(false), 3000);
+      }, 1500);
+      return;
+    }
+
     setIsCheckingOut(planId);
     
-    // Simulate a checkout process
-    setTimeout(() => {
-      setIsCheckingOut(null);
-      setShowSuccess(true);
-      onUpgrade(planId);
+    try {
+      const plan = plans.find(p => p.id === planId);
+      const response = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          planId,
+          planName: plan?.name,
+          priceString: plan?.price
+        }),
+      });
+
+      const session = await response.json();
       
-      setTimeout(() => {
-        setShowSuccess(false);
-      }, 3000);
-    }, 2000);
+      if (session.error) {
+        throw new Error(session.error);
+      }
+
+      const stripe = await stripePromise;
+      const { error } = await (stripe as any).redirectToCheckout({
+        sessionId: session.id,
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error: any) {
+      console.error('Stripe error:', error);
+      alert('Payment failed. Please ensure you have set the STRIPE_SECRET_KEY in your environment variables.');
+      setIsCheckingOut(null);
+    }
   };
 
   return (
@@ -95,14 +135,14 @@ export default function Pricing({ currentPlan, onUpgrade }: PricingProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {plans.map((plan) => (
-          <div 
-            key={plan.id} 
-            className={cn(
-              "bg-security-card border rounded-3xl p-8 flex flex-col relative transition-all duration-500 group",
-              plan.popular ? "border-security-accent shadow-[0_0_40px_rgba(0,242,255,0.1)]" : "border-security-border",
-              currentPlan === plan.id && "ring-2 ring-security-success ring-offset-4 ring-offset-security-bg"
-            )}
-          >
+            <div 
+              key={plan.id} 
+              className={cn(
+                "bg-security-card border rounded-3xl p-8 flex flex-col relative transition-all duration-500 group",
+                plan.popular ? "border-security-accent shadow-[0_0_50px_rgba(59,130,246,0.15)]" : "border-security-border",
+                currentPlan === plan.id && "ring-2 ring-security-success ring-offset-4 ring-offset-security-bg"
+              )}
+            >
             {plan.popular && (
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-security-accent text-security-bg text-[10px] font-bold px-4 py-1 rounded-full uppercase tracking-widest">
                 Most Popular
@@ -152,7 +192,7 @@ export default function Pricing({ currentPlan, onUpgrade }: PricingProps) {
                 currentPlan === plan.id 
                   ? "bg-security-success/10 text-security-success border border-security-success/20 cursor-default" 
                   : plan.popular 
-                    ? "bg-security-accent text-security-bg hover:bg-white shadow-[0_0_20px_rgba(0,242,255,0.2)]" 
+                    ? "bg-security-accent text-white hover:bg-blue-400 shadow-[0_0_25px_rgba(59,130,246,0.3)]" 
                     : "bg-security-bg border border-security-border text-white hover:border-security-accent hover:text-security-accent"
               )}
             >
@@ -168,7 +208,7 @@ export default function Pricing({ currentPlan, onUpgrade }: PricingProps) {
                 </>
               ) : (
                 <>
-                  {plan.id === 'free' ? 'Get Started' : `Start ${plan.trial} Trial`}
+                  {plan.id === 'free' ? `Start ${plan.trial} Trial` : 'Upgrade Now'}
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -195,6 +235,50 @@ export default function Pricing({ currentPlan, onUpgrade }: PricingProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <div className="bg-security-card border border-security-border p-8 rounded-3xl relative overflow-hidden group">
+        <div className="absolute inset-0 bg-security-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+          <div className="space-y-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-security-success/10 border border-security-success/20 text-security-success text-[10px] font-mono uppercase tracking-widest">
+              <Zap className="w-3 h-3" />
+              Flexible Contribution
+            </div>
+            <h3 className="text-3xl font-bold text-white">Support Our Mission</h3>
+            <p className="text-gray-400 leading-relaxed">
+              Want to contribute a custom amount? Use the QR code to make a one-time payment of any value. Your support helps us keep the AI models running and the community protected.
+            </p>
+            <div className="flex items-center gap-4 text-xs font-mono text-gray-500">
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-security-success" />
+                Any Amount
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-security-success" />
+                Instant Access
+              </div>
+              <div className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-security-success" />
+                Secure Flow
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-center justify-center p-8 bg-security-bg/50 border border-security-border rounded-2xl gap-4">
+            <div className="p-4 bg-white rounded-xl shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+              <QRCodeSVG 
+                value={window.location.href} 
+                size={180}
+                level="H"
+                includeMargin={true}
+              />
+            </div>
+            <div className="text-center">
+              <p className="text-white font-bold text-sm mb-1">Scan to Donate/Pay</p>
+              <p className="text-xs text-gray-500 font-mono italic">Compatible with all major digital wallets</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="bg-security-card border border-security-border p-12 rounded-3xl relative overflow-hidden">
         <div className="scanline opacity-5" />

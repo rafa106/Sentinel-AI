@@ -68,7 +68,7 @@ export default function ThreatScanner() {
             <button
               onClick={handleScan}
               disabled={loading || !input.trim()}
-              className="flex-1 py-4 bg-security-accent text-security-bg font-bold rounded-xl hover:bg-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(0,242,255,0.3)]"
+              className="flex-1 py-4 bg-security-accent text-white font-bold rounded-xl hover:bg-blue-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-[0_0_25px_rgba(59,130,246,0.4)]"
             >
               {loading ? (
                 <>
