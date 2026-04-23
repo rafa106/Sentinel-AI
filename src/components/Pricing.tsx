@@ -68,11 +68,13 @@ export default function Pricing({ currentPlan, onUpgrade }: PricingProps) {
   const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  const handleCheckout = async (planId: string) => {
-    if (planId === currentPlan) return;
+  const [customAmount, setCustomAmount] = useState<string>('5.00');
+
+  const handleCheckout = async (planId: string, isDonation = false) => {
+    if (planId === currentPlan && !isDonation) return;
     
     // Free plan just starts the trial immediately in this simulation
-    if (planId === 'free') {
+    if (planId === 'free' && !isDonation) {
       setIsCheckingOut(planId);
       setTimeout(() => {
         setIsCheckingOut(null);
@@ -94,8 +96,9 @@ export default function Pricing({ currentPlan, onUpgrade }: PricingProps) {
         },
         body: JSON.stringify({
           planId,
-          planName: plan?.name,
-          priceString: plan?.price
+          planName: isDonation ? 'Custom Donation' : plan?.name,
+          priceString: isDonation ? customAmount : plan?.price,
+          isDonation
         }),
       });
 
@@ -246,8 +249,34 @@ export default function Pricing({ currentPlan, onUpgrade }: PricingProps) {
             </div>
             <h3 className="text-3xl font-bold text-white">Support Our Mission</h3>
             <p className="text-gray-400 leading-relaxed">
-              Want to contribute a custom amount? Use the QR code to make a one-time payment of any value. Your support helps us keep the AI models running and the community protected.
+              Want to contribute a custom amount? Use the input below or scan the QR code to make a one-time payment of any value. Your support helps us keep the AI models running and the community protected.
             </p>
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="relative flex-1 w-full">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
+                <input 
+                  type="number" 
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                  placeholder="5.00"
+                  className="w-full pl-8 pr-4 py-3 bg-security-bg border border-security-border rounded-xl text-white focus:outline-none focus:border-security-accent transition-all"
+                />
+              </div>
+              <button 
+                onClick={() => handleCheckout('custom', true)}
+                disabled={isCheckingOut === 'custom'}
+                className="w-full sm:w-auto px-8 py-3 bg-security-success text-security-bg font-bold rounded-xl hover:bg-green-400 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(34,197,94,0.3)]"
+              >
+                {isCheckingOut === 'custom' ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    Donate Now
+                  </>
+                )}
+              </button>
+            </div>
             <div className="flex items-center gap-4 text-xs font-mono text-gray-500">
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-security-success" />

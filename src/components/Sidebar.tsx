@@ -122,6 +122,9 @@ export default function Sidebar({ activeTab, setActiveTab, currentPlan, isOpen, 
               <div className="w-full h-full bg-security-success animate-pulse" />
             </div>
           </div>
+          <div className="text-center">
+            <span className="text-[10px] font-mono text-gray-600 uppercase tracking-widest">© 2026 Sentinel AI</span>
+          </div>
         </div>
       </div>
     </>

@@ -174,18 +174,30 @@ export default function App() {
 
         <div className="absolute inset-0 cyber-grid opacity-10 pointer-events-none" />
         
-        <div className="p-4 md:p-8 max-w-7xl mx-auto w-full min-h-full relative z-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-            >
-              {renderContent()}
-            </motion.div>
-          </AnimatePresence>
+        <div className="p-4 md:p-8 max-w-7xl mx-auto w-full flex-1 relative z-10 flex flex-col">
+          <div className="flex-1">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+              >
+                {renderContent()}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+          
+          <footer className="mt-12 py-8 border-t border-security-border flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
+              Sentinel AI Security Cluster v4.2.0 • © 2026
+            </p>
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] font-mono text-security-success uppercase tracking-tighter">System Health: 100%</span>
+              <div className="w-1 h-1 rounded-full bg-security-success animate-ping" />
+            </div>
+          </footer>
         </div>
 
         {/* Global Scanline Effect */}

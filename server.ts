@@ -89,16 +89,19 @@ async function startServer() {
   // API Route: Create Checkout Session
   app.post("/api/create-checkout-session", async (req, res) => {
     try {
-      const { planId, planName, priceString } = req.body;
+      const { planId, planName, priceString, isDonation } = req.body;
       
-      // Map plans to fixed prices for this demo
-      // or use price from request (careful in production!)
+      // Calculate price in cents
       let price = 0;
-      if (planId === 'pro') price = 4900; // $49.00
-      if (planId === 'titan') price = 14900; // $149.00
+      if (isDonation) {
+        price = Math.round(parseFloat(priceString) * 100);
+      } else {
+        if (planId === 'pro') price = 999; // $9.99
+        if (planId === 'enterprise') price = 2999; // $29.99
+      }
       
-      if (price === 0) {
-        return res.status(400).json({ error: "Invalid plan" });
+      if (price < 50) { // Stripe minimum is usually $0.50
+        return res.status(400).json({ error: "Amount too low (minimum $0.50)" });
       }
 
       const s = getStripe();
