@@ -5,6 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { cn } from '../lib/utils';
 import { db, collection, query, where, onSnapshot } from '../lib/firebase';
 import { useAuth } from './AuthProvider';
+import AdUnit from './AdUnit';
 
 const data = [
   { time: '00:00', threats: 12, traffic: 400 },
@@ -159,6 +160,8 @@ export default function Dashboard() {
           trend="Stable" 
         />
       </div>
+
+      <AdUnit slot="0000000000" />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 bg-security-card border border-security-border p-6 rounded-xl relative overflow-hidden">

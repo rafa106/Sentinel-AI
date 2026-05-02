@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Check, Shield, Zap, Crown, CreditCard, Loader2, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { loadStripe } from '@stripe/stripe-js';
+import AdUnit from './AdUnit';
 
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -219,6 +220,8 @@ export default function Pricing({ currentPlan, onUpgrade }: PricingProps) {
           </div>
         ))}
       </div>
+
+      <AdUnit slot="1111111111" />
 
       <AnimatePresence>
         {showSuccess && (
